@@ -1,0 +1,276 @@
+:root {
+    --bg-color: #0a0a0a;
+    --card-bg: #1a1a1a;
+    --accent-red: #ff3b3b;
+    --accent-gold: #ffcc00;
+    --text-white: #ffffff;
+    --text-gray: #a0a0a0;
+    --font-main: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-white);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+.hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    background-image: url('https://via.placeholder.com/1920x1080/000/fff?text=U-Deol-Sik+Background'); /* Placeholder */
+    background-size: cover;
+    background-position: center;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(10, 10, 10, 0.4), var(--bg-color));
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+}
+
+.hero h1 {
+    font-size: 8rem;
+    font-weight: 900;
+    letter-spacing: -2px;
+    margin-bottom: 0.5rem;
+    color: var(--accent-red);
+}
+
+.hero .sub-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.hero .tagline {
+    font-size: 1.2rem;
+    color: var(--text-gray);
+    letter-spacing: 5px;
+    text-transform: uppercase;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+}
+
+.section {
+    margin-bottom: 8rem;
+}
+
+.section-title {
+    font-size: 3rem;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 4rem;
+    position: relative;
+}
+
+.section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-red);
+    margin: 1rem auto;
+}
+
+/* Villain Grid */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 3rem;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(255, 59, 59, 0.2);
+    border-color: var(--accent-red);
+}
+
+.card-image-wrapper {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+}
+
+.villain-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%) contrast(1.2);
+    transition: filter 0.3s ease;
+}
+
+.card:hover .villain-img {
+    filter: grayscale(0%) contrast(1.1);
+}
+
+.wanted-stamp {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: var(--accent-red);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-weight: 900;
+    transform: rotate(15deg);
+    border: 2px solid white;
+    font-size: 1.2rem;
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+}
+
+.card-content {
+    padding: 2rem;
+}
+
+.villain-name {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    color: var(--accent-gold);
+}
+
+.villain-alias {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-white);
+    margin-bottom: 1rem;
+    border-bottom: 1px dashed #444;
+    display: inline-block;
+}
+
+.villain-story {
+    font-size: 0.95rem;
+    color: var(--text-gray);
+    margin-bottom: 1.5rem;
+}
+
+.bounty {
+    font-weight: 900;
+    color: var(--accent-red);
+    font-size: 1.2rem;
+    text-align: right;
+}
+
+/* Special Analysis */
+.analysis-container {
+    background-color: #111;
+    padding: 3rem;
+    border-radius: 20px;
+    border: 2px solid #222;
+    text-align: center;
+}
+
+.gauge-wrapper {
+    margin-bottom: 2rem;
+}
+
+.gauge {
+    width: 100%;
+    height: 10px;
+    background-color: #333;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-red), #ff00ff);
+    transition: width 2s ease-in-out;
+}
+
+.gauge-label {
+    font-size: 1.2rem;
+}
+
+/* Heroes section */
+.heroes-content {
+    text-align: center;
+}
+
+.hero-group-img {
+    width: 100%;
+    max-width: 900px;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    border: 5px solid #222;
+}
+
+.heroes-tribute {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--accent-gold);
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 4rem;
+    border-top: 1px solid #222;
+    color: var(--text-gray);
+    font-size: 0.9rem;
+}
+
+/* Animations */
+.fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Glitch animation */
+.glitch {
+    position: relative;
+    display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 4rem;
+    }
+    .hero .sub-title {
+        font-size: 1.5rem;
+    }
+    .section-title {
+        font-size: 2rem;
+    }
+}
