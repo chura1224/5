@@ -1,153 +1,460 @@
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const statusEl = document.getElementById('game-status');
-const gameOverOverlay = document.getElementById('game-over-overlay');
-const restartBtn = document.getElementById('restart-btn');
-const finalScoreText = document.getElementById('final-score-text');
-const funnyComment = document.getElementById('funny-comment');
 
-// Load Player Image
-const playerImg = new Image();
-playerImg.src = 'photo3.png'; // Ha-Seung-Jin
+canvas.width = 1024;
+canvas.height = 576;
 
-let score = 0;
-let gameActive = false;
-let player = { x: 400, y: 500, w: 100, h: 100 };
-let objects = [];
-let powerupActive = false;
-let powerupTimer = 0;
+const gravity = 0.7;
 
-const comments = [
-    "하과장님, 승진턱은 내고 가셔야죠!",
-    "영수증 피하는 솜씨가 거의 신급이십니다.",
-    "골프채만 챙기지 마시고 친구들도 챙기세요!",
-    "오늘도 엄한 데 쏘고 계시군요... 엄데쏨!",
-    "로또 당첨된 개두호 친구한테 가보시는 건 어때요?"
-];
+class Sprite {
+    constructor({ position, imageSrc, scale = 1, framesMax = 1, offset = { x: 0, y: 0 } }) {
+        this.position = position;
+        this.width = 50;
+        this.height = 150;
+        this.image = new Image();
+        this.image.src = imageSrc;
+        this.scale = scale;
+        this.framesMax = framesMax;
+        this.framesCurrent = 0;
+        this.framesElapsed = 0;
+        this.framesHold = 5;
+        this.offset = offset;
+    }
 
-// Object types
-const TYPES = {
-    RECEIPT: { color: '#fff', score: 0, speed: 4, label: '🧾 영수증' },
-    GOLF: { color: '#ffcc00', score: 10, speed: 5, label: '⛳ 골프채' },
-    LOTTO: { color: '#00ff00', score: 50, speed: 7, label: '🎟️ 로또' },
-    EOMDESSOM: { color: '#ff00ff', score: 0, speed: 6, label: '✨ 엄데쏨!' }
-};
+    draw() {
+        ctx.drawImage(
+            this.image,
+            this.framesCurrent * (this.image.width / this.framesMax),
+            0,
+            this.image.width / this.framesMax,
+            this.image.height,
+            this.position.x - this.offset.x,
+            this.position.y - this.offset.y,
+            (this.image.width / this.framesMax) * this.scale,
+            this.image.height * this.scale
+        );
+    }
 
-function initGame() {
-    score = 0;
-    scoreEl.innerText = score;
-    objects = [];
-    gameActive = true;
-    powerupActive = false;
-    gameOverOverlay.classList.add('hidden');
-    statusEl.innerText = "RUN!!";
-    requestAnimationFrame(update);
+    update() {
+        this.draw();
+        this.animateFrames();
+    }
+
+    animateFrames() {
+        this.framesElapsed++;
+        if (this.framesElapsed % this.framesHold === 0) {
+            if (this.framesCurrent < this.framesMax - 1) {
+                this.framesCurrent++;
+            } else {
+                this.framesCurrent = 0;
+            }
+        }
+    }
 }
 
-// Mouse/Touch control
-canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    player.x = (e.clientX - rect.left) * scaleX - player.w / 2;
-    // Bound check
-    if (player.x < 0) player.x = 0;
-    if (player.x > canvas.width - player.w) player.x = canvas.width - player.w;
+class Fighter extends Sprite {
+    constructor({
+        position,
+        velocity,
+        color = 'red',
+        imageSrc,
+        scale = 1,
+        framesMax = 1,
+        offset = { x: 0, y: 0 },
+        sprites,
+        attackBox = { offset: {}, width: undefined, height: undefined }
+    }) {
+        super({
+            position,
+            imageSrc,
+            scale,
+            framesMax,
+            offset
+        });
+
+        this.velocity = velocity;
+        this.width = 80;
+        this.height = 180;
+        this.lastKey;
+        this.attackBox = {
+            position: {
+                x: this.position.x,
+                y: this.position.y
+            },
+            offset: attackBox.offset,
+            width: attackBox.width,
+            height: attackBox.height
+        };
+        this.color = color;
+        this.isAttacking = false;
+        this.health = 100;
+        this.framesCurrent = 0;
+        this.framesElapsed = 0;
+        this.framesHold = 5;
+        this.sprites = sprites;
+        this.dead = false;
+
+        for (const sprite in this.sprites) {
+            sprites[sprite].image = new Image();
+            sprites[sprite].image.src = sprites[sprite].imageSrc;
+        }
+    }
+
+    update() {
+        this.draw();
+        if (!this.dead) this.animateFrames();
+
+        // attack boxes
+        this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
+        this.attackBox.position.y = this.position.y + this.attackBox.offset.y;
+
+        // draw attack box (debug)
+        // ctx.fillRect(this.attackBox.position.x, this.attackBox.position.y, this.attackBox.width, this.attackBox.height);
+
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+
+        // gravity function
+        if (this.position.y + this.height + this.velocity.y >= canvas.height - 20) {
+            this.velocity.y = 0;
+            this.position.y = canvas.height - 20 - this.height;
+        } else {
+            this.velocity.y += gravity;
+        }
+    }
+
+    attack() {
+        this.switchSprite('attack1');
+        this.isAttacking = true;
+    }
+
+    takeHit() {
+        this.health -= 10;
+        if (this.health <= 0) {
+            this.switchSprite('death');
+        } else {
+            this.switchSprite('takeHit');
+        }
+    }
+
+    switchSprite(sprite) {
+        if (this.image === this.sprites.death.image) {
+            if (this.framesCurrent === this.sprites.death.framesMax - 1) this.dead = true;
+            return;
+        }
+
+        // overriding all other animations with the attack animation
+        if (
+            this.image === this.sprites.attack1.image &&
+            this.framesCurrent < this.sprites.attack1.framesMax - 1
+        )
+            return;
+
+        // override when fighter gets hit
+        if (
+            this.image === this.sprites.takeHit.image &&
+            this.framesCurrent < this.sprites.takeHit.framesMax - 1
+        )
+            return;
+
+        switch (sprite) {
+            case 'idle':
+                if (this.image !== this.sprites.idle.image) {
+                    this.image = this.sprites.idle.image;
+                    this.framesMax = this.sprites.idle.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'run':
+                if (this.image !== this.sprites.run.image) {
+                    this.image = this.sprites.run.image;
+                    this.framesMax = this.sprites.run.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'jump':
+                if (this.image !== this.sprites.jump.image) {
+                    this.image = this.sprites.jump.image;
+                    this.framesMax = this.sprites.jump.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'fall':
+                if (this.image !== this.sprites.fall.image) {
+                    this.image = this.sprites.fall.image;
+                    this.framesMax = this.sprites.fall.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'attack1':
+                if (this.image !== this.sprites.attack1.image) {
+                    this.image = this.sprites.attack1.image;
+                    this.framesMax = this.sprites.attack1.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'takeHit':
+                if (this.image !== this.sprites.takeHit.image) {
+                    this.image = this.sprites.takeHit.image;
+                    this.framesMax = this.sprites.takeHit.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'death':
+                if (this.image !== this.sprites.death.image) {
+                    this.image = this.sprites.death.image;
+                    this.framesMax = this.sprites.death.framesMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+        }
+    }
+}
+
+// Background
+const background = new Sprite({
+    position: { x: 0, y: 0 },
+    imageSrc: 'https://img.freepik.com/premium-photo/forest-jungle-cartoon-style_800563-2212.jpg', // Placeholder jungle
+    scale: 1,
+    framesMax: 1
 });
 
-function spawnObject() {
-    const chance = Math.random();
-    let type;
-    if (chance < 0.7) type = TYPES.RECEIPT;
-    else if (chance < 0.85) type = TYPES.GOLF;
-    else if (chance < 0.95) type = TYPES.LOTTO;
-    else type = TYPES.EOMDESSOM;
+const player = new Fighter({
+    position: { x: 100, y: 0 },
+    velocity: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    imageSrc: 'monkey.png',
+    framesMax: 1,
+    scale: 0.3,
+    offset: { x: 100, y: 150 },
+    sprites: {
+        idle: { imageSrc: 'monkey.png', framesMax: 1 },
+        run: { imageSrc: 'monkey.png', framesMax: 1 },
+        jump: { imageSrc: 'monkey.png', framesMax: 1 },
+        fall: { imageSrc: 'monkey.png', framesMax: 1 },
+        attack1: { imageSrc: 'monkey.png', framesMax: 1 },
+        takeHit: { imageSrc: 'monkey.png', framesMax: 1 },
+        death: { imageSrc: 'monkey.png', framesMax: 1 }
+    },
+    attackBox: { offset: { x: 100, y: 50 }, width: 160, height: 50 }
+});
 
-    objects.push({
-        x: Math.random() * (canvas.width - 50),
-        y: -50,
-        w: 50,
-        h: 50,
-        type: type
-    });
-}
+const enemy = new Fighter({
+    position: { x: 800, y: 100 },
+    velocity: { x: 0, y: 0 },
+    color: 'blue',
+    offset: { x: 50, y: 0 },
+    imageSrc: 'monkey.png',
+    framesMax: 1,
+    scale: 0.3,
+    offset: { x: 100, y: 150 },
+    sprites: {
+        idle: { imageSrc: 'monkey.png', framesMax: 1 },
+        run: { imageSrc: 'monkey.png', framesMax: 1 },
+        jump: { imageSrc: 'monkey.png', framesMax: 1 },
+        fall: { imageSrc: 'monkey.png', framesMax: 1 },
+        attack1: { imageSrc: 'monkey.png', framesMax: 1 },
+        takeHit: { imageSrc: 'monkey.png', framesMax: 1 },
+        death: { imageSrc: 'monkey.png', framesMax: 1 }
+    },
+    attackBox: { offset: { x: -170, y: 50 }, width: 170, height: 50 }
+});
 
-function update() {
-    if (!gameActive) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Player
-    if (powerupActive) {
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#ff3b3b';
-    }
-    ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-    ctx.shadowBlur = 0;
-
-    // Powerup check
-    if (powerupActive) {
-        powerupTimer--;
-        statusEl.innerText = `EOM-DE-SSOM MODE: ${Math.ceil(powerupTimer/60)}s`;
-        if (powerupTimer <= 0) {
-            powerupActive = false;
-            statusEl.innerText = "RUN!!";
-        }
-    }
-
-    // Spawn & Move Objects
-    if (Math.random() < 0.03) spawnObject();
-
-    for (let i = objects.length - 1; i >= 0; i--) {
-        const obj = objects[i];
-        obj.y += obj.type.speed;
-
-        // Draw Object
-        ctx.fillStyle = obj.type.color;
-        ctx.font = '30px serif';
-        ctx.fillText(obj.type.label, obj.x, obj.y);
-
-        // Collision Check
-        if (checkCollision(player, obj)) {
-            if (obj.type === TYPES.RECEIPT) {
-                if (!powerupActive) endGame();
-            } else if (obj.type === TYPES.EOMDESSOM) {
-                powerupActive = true;
-                powerupTimer = 300; // 5 seconds
-            } else {
-                score += obj.type.score;
-                scoreEl.innerText = score;
-            }
-            objects.splice(i, 1);
-            continue;
-        }
-
-        // Out of bounds
-        if (obj.y > canvas.height) {
-            objects.splice(i, 1);
-        }
-    }
-
-    requestAnimationFrame(update);
-}
-
-function checkCollision(a, b) {
-    return a.x < b.x + b.w &&
-           a.x + a.w > b.x &&
-           a.y < b.y + b.h &&
-           a.y + a.h > b.y;
-}
-
-function endGame() {
-    gameActive = false;
-    gameOverOverlay.classList.remove('hidden');
-    finalScoreText.innerText = `최종 점수: ${score}`;
-    funnyComment.innerText = comments[Math.floor(Math.random() * comments.length)];
-}
-
-restartBtn.addEventListener('click', initGame);
-
-// Start!
-playerImg.onload = () => {
-    initGame();
+const keys = {
+    a: { pressed: false },
+    d: { pressed: false },
+    w: { pressed: false },
+    ArrowRight: { pressed: false },
+    ArrowLeft: { pressed: false },
+    ArrowUp: { pressed: false }
 };
+
+function rectangularCollision({ rectangle1, rectangle2 }) {
+    return (
+        rectangle1.attackBox.position.x + rectangle1.attackBox.width >= rectangle2.position.x &&
+        rectangle1.attackBox.position.x <= rectangle2.position.x + rectangle2.width &&
+        rectangle1.attackBox.position.y + rectangle1.attackBox.height >= rectangle2.position.y &&
+        rectangle1.attackBox.position.y <= rectangle2.position.y + rectangle2.height
+    );
+}
+
+function determineWinner({ player, enemy, timerId }) {
+    clearTimeout(timerId);
+    document.querySelector('#message-overlay').classList.remove('hidden');
+    if (player.health === enemy.health) {
+        document.querySelector('#victory-text').innerHTML = 'DRAW';
+    } else if (player.health > enemy.health) {
+        document.querySelector('#victory-text').innerHTML = 'MONKEY 1 WINS';
+    } else if (player.health < enemy.health) {
+        document.querySelector('#victory-text').innerHTML = 'MONKEY 2 WINS';
+    }
+}
+
+let timer = 60;
+let timerId;
+function decreaseTimer() {
+    if (timer > 0) {
+        timerId = setTimeout(decreaseTimer, 1000);
+        timer--;
+        document.querySelector('#timer').innerHTML = timer;
+    }
+
+    if (timer === 0) {
+        determineWinner({ player, enemy, timerId });
+    }
+}
+
+function animate() {
+    window.requestAnimationFrame(animate);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // background.update(); // Not using yet to avoid cors or link issues, using gradient in css
+    
+    // Fill background with a simple color for now until we have proper assets
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    player.update();
+    enemy.update();
+
+    player.velocity.x = 0;
+    enemy.velocity.x = 0;
+
+    // player movement
+    if (keys.a.pressed && player.lastKey === 'a') {
+        player.velocity.x = -5;
+        player.switchSprite('run');
+    } else if (keys.d.pressed && player.lastKey === 'd') {
+        player.velocity.x = 5;
+        player.switchSprite('run');
+    } else {
+        player.switchSprite('idle');
+    }
+
+    // jumping
+    if (player.velocity.y < 0) {
+        player.switchSprite('jump');
+    } else if (player.velocity.y > 0) {
+        player.switchSprite('fall');
+    }
+
+    // enemy movement
+    if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
+        enemy.velocity.x = -5;
+        enemy.switchSprite('run');
+    } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
+        enemy.velocity.x = 5;
+        enemy.switchSprite('run');
+    } else {
+        enemy.switchSprite('idle');
+    }
+
+    // jumping
+    if (enemy.velocity.y < 0) {
+        enemy.switchSprite('jump');
+    } else if (enemy.velocity.y > 0) {
+        enemy.switchSprite('fall');
+    }
+
+    // detect for collision & enemy gets hit
+    if (
+        rectangularCollision({ rectangle1: player, rectangle2: enemy }) &&
+        player.isAttacking &&
+        player.framesCurrent === 0 // Check frame for realism if animated
+    ) {
+        enemy.takeHit();
+        player.isAttacking = false;
+        document.querySelector('#p2-health').style.width = enemy.health + '%';
+    }
+
+    // if player misses
+    if (player.isAttacking && player.framesCurrent === 0) {
+        player.isAttacking = false;
+    }
+
+    // this is where our player gets hit
+    if (
+        rectangularCollision({ rectangle1: enemy, rectangle2: player }) &&
+        enemy.isAttacking &&
+        enemy.framesCurrent === 0
+    ) {
+        player.takeHit();
+        enemy.isAttacking = false;
+        document.querySelector('#p1-health').style.width = player.health + '%';
+    }
+
+    // if enemy misses
+    if (enemy.isAttacking && enemy.framesCurrent === 0) {
+        enemy.isAttacking = false;
+    }
+
+    // end game based on health
+    if (enemy.health <= 0 || player.health <= 0) {
+        determineWinner({ player, enemy, timerId });
+    }
+}
+
+decreaseTimer();
+animate();
+
+window.addEventListener('keydown', (event) => {
+    if (!player.dead) {
+        switch (event.key) {
+            case 'd':
+                keys.d.pressed = true;
+                player.lastKey = 'd';
+                break;
+            case 'a':
+                keys.a.pressed = true;
+                player.lastKey = 'a';
+                break;
+            case 'w':
+                if (player.velocity.y === 0) player.velocity.y = -20;
+                break;
+            case 'g':
+                player.attack();
+                break;
+        }
+    }
+
+    if (!enemy.dead) {
+        switch (event.key) {
+            case 'ArrowRight':
+                keys.ArrowRight.pressed = true;
+                enemy.lastKey = 'ArrowRight';
+                break;
+            case 'ArrowLeft':
+                keys.ArrowLeft.pressed = true;
+                enemy.lastKey = 'ArrowLeft';
+                break;
+            case 'ArrowUp':
+                if (enemy.velocity.y === 0) enemy.velocity.y = -20;
+                break;
+            case '1':
+                enemy.attack();
+                break;
+        }
+    }
+});
+
+window.addEventListener('keyup', (event) => {
+    switch (event.key) {
+        case 'd':
+            keys.d.pressed = false;
+            break;
+        case 'a':
+            keys.a.pressed = false;
+            break;
+
+        case 'ArrowRight':
+            keys.ArrowRight.pressed = false;
+            break;
+        case 'ArrowLeft':
+            keys.ArrowLeft.pressed = false;
+            break;
+    }
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+    location.reload();
+});
