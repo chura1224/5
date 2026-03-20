@@ -69,6 +69,26 @@ body {
     text-transform: uppercase;
 }
 
+.btn-cta {
+    display: inline-block;
+    padding: 1.2rem 2.5rem;
+    background-color: var(--accent-red);
+    color: white;
+    text-decoration: none;
+    font-weight: 900;
+    font-size: 1.2rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.btn-cta:hover {
+    background-color: transparent;
+    border-color: var(--accent-red);
+    box-shadow: 0 0 30px rgba(255, 59, 59, 0.4);
+    transform: scale(1.05);
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
